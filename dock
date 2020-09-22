@@ -1,0 +1,94 @@
+#! /usr/bin/python
+"""
+A wrapper script around docker to ease research.
+
+Author: Huizi Mao
+"""
+from __future__ import print_function
+
+import os
+import subprocess
+import sys
+import argparse
+
+
+def _to_v_format(mapping):
+    arg = ' '.join(['-v %s:%s'%(mapp[0], mapp[1]) for mapp in mapping])
+    return arg
+
+
+def _separate_positional():
+    current_level = 0
+    for idx in range(1, len(sys.argv)):
+        if not sys.argv[idx].startswith('-'):
+            current_level += 1
+        if current_level == 2:
+            break
+    return sys.argv[1: idx+1], sys.argv[idx+1:]
+
+
+def load_default_mapping():
+    filename = os.getenv("HOME") + '/.docker/dockpath'
+    if os.path.exists(filename):
+        lines = open(filename).readlines()
+        mapping = []
+        for line in lines:
+            line = line.strip()
+            if line.startswith('#'):
+                continue
+            if len(line.split(':')) != 2:
+                continue
+            mapping.append(line.split(':'))
+    else:
+        mapping = []
+    for idx, mapp in enumerate(mapping):
+        if os.path.realpath(mapp[0]) != mapp[0]:
+            mapping[idx] = (os.path.realpath(mapp[0]), mapp[1])
+    return mapping
+
+
+def map_dir(mapping, dirname, default='/'):
+    """Find directories in command and automatically substitute it with mapped ones."""
+    if dirname.startswith('/'):
+        for mapp in mapping:
+            if dirname.startswith(mapp[0]):
+                dirname = os.path.join(mapp[1], os.path.relpath(dirname, mapp[0]))
+                return dirname
+    return default
+
+
+def shell_run(cmd):
+    """Ensure docker alias is called, e.g., nvidia-docker."""
+    subprocess.call([os.environ['SHELL'], '-i', '-c', cmd])
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('command', choices=['start', 'run', 'save'])
+    parser.add_argument('name')
+    parser.add_argument('--print', action='store_true')
+    inputs_for_parser, misc_args = _separate_positional()
+    args = parser.parse_args(inputs_for_parser)
+    default_mapping = load_default_mapping()
+    assert len(misc_args) > 0
+    if args.command == 'start':
+        image = misc_args[0]
+        cmd = "docker run -ti {mount_cmd} --ipc=host --name={name} {image} bash; docker start {name}"
+        cmd = cmd.format(mount_cmd=_to_v_format(default_mapping), image=image, name=args.name)
+    elif args.command == 'run' or args.command == 'rootrun':
+        workdir = map_dir(default_mapping, os.getcwd())
+        mapped_args = [map_dir(default_mapping, arg, default=arg) for arg in misc_args]
+        home = map_dir(default_mapping, os.getenv('HOME'))
+        uid = os.getuid() if not args.command == 'rootrun' else 0
+        cmd = "docker exec -it -u {uid} -e HOME={home} -w {workdir} {name} sh -c '{command}'"
+        cmd = cmd.format(workdir=workdir, name=args.name, command=' '.join(mapped_args), uid=uid, home=home)
+    else:
+        raise ValueError("Unknown command: " + args.command)
+
+    print("Execute the following command:")
+    print(cmd)
+    if not args.print:
+        shell_run(cmd)
+
+if __name__ == "__main__":
+    main()

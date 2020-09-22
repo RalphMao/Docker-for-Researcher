@@ -1,0 +1,3 @@
+$HOME:$HOME
+# Set up your custom directory mapping.
+# /data_in_host:/data_in_container
