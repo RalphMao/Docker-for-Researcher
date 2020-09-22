@@ -1,7 +1,7 @@
 # Docker-for-Researcher
 
 Docker-for-Researcher (DfR) provides a research-orientied style of using Docker. 
-It keeps the reproducibility and dependency separation advantanges of Docker, while makes running everything in docker fast and effortless on the host, like that:
+It keeps the reproducibility and dependency separation advantanges of Docker, meanwhile makes running everything in docker fast and effortless on the host, like that:
 ```
 dock run <container-tag> python3 dir_on_host/test.py /data-on-host
 ```
