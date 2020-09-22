@@ -1,8 +1,9 @@
 # Docker-for-Researcher
 
-Docker-for-Researcher (DfR) is a wrapper script that keeps the reproducibility and dependency separation of Docker, but also makes running everything in docker fast and effortless on the host, like that:
+Docker-for-Researcher (DfR) provides a research-orientied style of using Docker. 
+It keeps the reproducibility and dependency separation advantanges of Docker, while makes running everything in docker fast and effortless on the host, like that:
 ```
-dock run <container-tag> python3 experiment/test.py /data-on-host
+dock run <container-tag> python3 dir_on_host/test.py /data-on-host
 ```
 where `<container-tag>` is a custom container set up by DfR.
 
@@ -35,7 +36,7 @@ dock start py-3.9 python:3.9.0rc2-slim-buster
 ```
 After that you will be able to run every command in docker like in the host!
 ```
-dock run py-3.9 python3 experiment/test.py /data-on-host
+dock run py-3.9 python3 --version
 ```
 If you figure that there is still missing dependency like numpy, you can install it with root privilege (or just enter the container like normal and install everything).
 ```
@@ -45,4 +46,4 @@ dock rootrun py-3.9 pip install numpy
 ## Known issues
 * No X11 forwarding support. Setting up X11 forwarding is non-trivial on host.
 * Directory remapping may cause unwanted changes to your original command. Therefore, it is recommended to use the same directory naming in host/container to avoid potential directory resolving issues.
-
+* Passing strings into the command may be problematic, as it is likely to be preprocessed by shell and misinterpreted by dock.
