@@ -15,8 +15,8 @@ Tested on Ubuntu 18.04 only.
 
 ### Clone this repo and run setup
 ```
-git clone 
-cd 
+git clone https://github.com/RalphMao/Docker-for-Researcher.git
+cd Docker-for-Researcher
 bash setup.sh
 ```
 ### Configure directory mapping 
