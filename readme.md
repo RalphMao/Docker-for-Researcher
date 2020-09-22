@@ -1,6 +1,6 @@
 # Docker-for-Researcher
 
-Docker-for-Researcher (DfR) is a wrapper script that keeps the advantages of Docker for reproducibility and dependency separation, but also makes running everything in docker fast and effortless on the host, like that:
+Docker-for-Researcher (DfR) is a wrapper script that keeps the reproducibility and dependency separation of Docker, but also makes running everything in docker fast and effortless on the host, like that:
 ```
 dock run <container-tag> python3 experiment/test.py /data-on-host
 ```
