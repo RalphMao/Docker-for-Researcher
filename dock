@@ -64,7 +64,7 @@ def shell_run(cmd):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['start', 'run', 'save'])
+    parser.add_argument('command', choices=['start', 'run', 'rootrun'])
     parser.add_argument('name')
     parser.add_argument('--print', action='store_true')
     inputs_for_parser, misc_args = _separate_positional()
@@ -87,6 +87,7 @@ def main():
 
     print("Execute the following command:")
     print(cmd)
+    print("==============================")
     if not args.print:
         shell_run(cmd)
 
