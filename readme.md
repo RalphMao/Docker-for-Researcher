@@ -1,10 +1,8 @@
 # Docker-for-Researcher
 
-Docker-for-Researcher (DfR) provides a wrapper script that the advantages of Docker for reproducibility and dependency separation, but makes running everything in docker fast and effortless, just like on the host.
-
-Suppose you have a code under development at `~/experiment/test.py`. On the host machine, it runs with Python-3.5 by `python3 experiment/test.py /test-data`. Now you would like to test it with Python-3.9 inside a docker container, as installing Python-3.9 may be cumbersome or conflicting on the host. With this repo, you can do it in a single command:
-`dock run py-3.9 python3 experiment/test.py /data-on-host`,
-where `py-3.9` is the container name that you set up with DfR.
+Docker-for-Researcher (DfR) is a wrapper script that keeps the advantages of Docker for reproducibility and dependency separation, but also makes running everything in docker fast and effortless on the host, like that:
+`dock run <container-tag> python3 experiment/test.py /data-on-host` ,
+where `<container-tag>` is a custom container set up by DfR.
 
 ## Prerequisite
 
@@ -24,7 +22,8 @@ The mapping configuration file is under `~/.docker/dockpath`. All configured sou
 
 ## Use cases 
 ### Create your first DfR container
-Come back to our previous example at `~/experiment/test.py`. Suppose you first pull an python-3.9 image.
+Suppose you have a code under development at `~/experiment/test.py`. On the host machine, it runs with Python-3.5 by `python3 experiment/test.py /test-data`. Now you would like to test it with Python-3.9 inside a docker container, as installing Python-3.9 may be cumbersome or conflicting on the host. 
+First pull a python-3.9 image.
 ```
 docker pull python:3.9.0rc2-slim-buster
 ```
@@ -44,3 +43,4 @@ dock rootrun py-3.9 pip install numpy
 ## Known issues
 * No X11 forwarding support. Setting up X11 forwarding is non-trivial on host.
 * Directory remapping may cause unwanted changes to your original command. Therefore, it is recommended to use the same directory naming in host/container to avoid potential directory resolving issues.
+
