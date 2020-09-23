@@ -68,7 +68,7 @@ def get_start_cmd(args, default_mapping):
     dir_mount = ' '.join(['-v %s:%s'%(mapp[0], mapp[1]) for mapp in default_mapping])
     cmd = "docker run -ti {mount_cmd} {x11_mount} --ipc=host --name={name} {image} bash; docker start {name}"
     cmd = cmd.format(image=args.image, name=args.name, mount_cmd=dir_mount, x11_mount=x11_mount)
-    hints = "Exit bash to finish setup."
+    hints = "Wait for bash prompt and then exit to finish setup."
     return cmd, hints
 
 
