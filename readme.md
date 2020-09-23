@@ -43,7 +43,38 @@ If you figure that there is still missing dependency like numpy, you can install
 dock rootrun py-3.9 pip install numpy
 ```
 
+### Use GUI forwarding
+
+```
+# If you are using docker with root, this command might be needed
+# xhost +local:root
+```
+
+Pull nvidia `cudagl` docker image, as OpenGL is already setup in the image.
+
+```
+docker pull nvidia/cudagl:10.1-devel-ubuntu18.04
+```
+
+Start a container with GUI forwarding turned on.
+
+```
+dock startgui cudagl nvidia/cudagl:10.1-devel-ubuntu18.04
+```
+
+Install an GUI app, you can use any app you need.
+
+```
+dock rootrun cudagl apt-get update
+dock rootrun cudagl apt-get install mesa-utils -y
+```
+You should be able to see gears turning. 
+
+```
+dock run cudagl glxgears
+```
+
+
 ## Known issues
-* No X11 forwarding support. Setting up X11 forwarding is non-trivial on host.
 * Directory remapping may cause unwanted changes to your original command. Therefore, it is recommended to use the same directory naming in host/container to avoid potential directory resolving issues.
 * Passing strings into the command may be problematic, as it is likely to be preprocessed by shell and misinterpreted by dock.

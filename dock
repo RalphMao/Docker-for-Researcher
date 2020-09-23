@@ -64,17 +64,22 @@ def shell_run(cmd):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['start', 'run', 'rootrun'])
+    parser.add_argument('command', choices=['start', 'startgui', 'run', 'rootrun', 'stop', 'rm'])
     parser.add_argument('name')
     parser.add_argument('--print', action='store_true')
     inputs_for_parser, misc_args = _separate_positional()
     args = parser.parse_args(inputs_for_parser)
+
     default_mapping = load_default_mapping()
-    assert len(misc_args) > 0
-    if args.command == 'start':
+    if args.command in ['start', 'run', 'rootrun', 'gui-start']:
+        assert len(misc_args) > 0
+    if args.command == 'start' or args.command == 'startgui':
         image = misc_args[0]
-        cmd = "docker run -ti {mount_cmd} --ipc=host --name={name} {image} bash; docker start {name}"
-        cmd = cmd.format(mount_cmd=_to_v_format(default_mapping), image=image, name=args.name)
+        gui_mount = ""
+        if args.command == 'startgui':
+            gui_mount = "-e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --runtime=nvidia"
+        cmd = "docker run -ti {mount_cmd} --ipc=host {gui_mount} --name={name} {image} bash; docker start {name}"
+        cmd = cmd.format(mount_cmd=_to_v_format(default_mapping), image=image, name=args.name, gui_mount=gui_mount)
     elif args.command == 'run' or args.command == 'rootrun':
         workdir = map_dir(default_mapping, os.getcwd())
         mapped_args = [map_dir(default_mapping, arg, default=arg) for arg in misc_args]
@@ -82,6 +87,12 @@ def main():
         uid = os.getuid() if not args.command == 'rootrun' else 0
         cmd = "docker exec -it -u {uid} -e HOME={home} -w {workdir} {name} sh -c '{command}'"
         cmd = cmd.format(workdir=workdir, name=args.name, command=' '.join(mapped_args), uid=uid, home=home)
+    elif args.command == 'stop':
+        cmd = "docker stop {name}"
+        cmd = cmd.format(name=args.name)
+    elif args.command == 'rm':
+        cmd = "docker rm {name}"
+        cmd = cmd.format(name=args.name)
     else:
         raise ValueError("Unknown command: " + args.command)
 
