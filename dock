@@ -8,26 +8,11 @@ from __future__ import print_function
 
 import os
 import subprocess
-import sys
 import argparse
 
 
-def _to_v_format(mapping):
-    arg = ' '.join(['-v %s:%s'%(mapp[0], mapp[1]) for mapp in mapping])
-    return arg
-
-
-def _separate_positional():
-    current_level = 0
-    for idx in range(1, len(sys.argv)):
-        if not sys.argv[idx].startswith('-'):
-            current_level += 1
-        if current_level == 2:
-            break
-    return sys.argv[1: idx+1], sys.argv[idx+1:]
-
-
 def load_default_mapping():
+    """Load directory mapping from dockpath config."""
     filename = os.getenv("HOME") + '/.docker/dockpath'
     if os.path.exists(filename):
         lines = open(filename).readlines()
@@ -58,49 +43,66 @@ def map_dir(mapping, dirname, default='/'):
 
 
 def shell_run(cmd):
-    """Ensure docker alias is called, e.g., nvidia-docker."""
+    """Ensure the right alias is called, e.g., nvidia-docker."""
     subprocess.call([os.environ['SHELL'], '-i', '-c', cmd])
 
+def get_start_cmd(args, default_mapping):
+    if args.x11:
+        x11_mount = "-e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix"
+    else:
+        x11_mount = ""
+    dir_mount = ' '.join(['-v %s:%s'%(mapp[0], mapp[1]) for mapp in default_mapping])
+    cmd = "docker run -ti {mount_cmd} {x11_mount} --ipc=host --name={name} {image} bash; docker start {name}"
+    cmd = cmd.format(image=args.image, name=args.name, mount_cmd=dir_mount, x11_mount=x11_mount)
+    hints = "Exit bash to finish setup."
+    return cmd, hints
+
+def get_run_cmd(args, default_mapping):
+    workdir = map_dir(default_mapping, os.getcwd())
+    mapped_args = [map_dir(default_mapping, arg, default=arg) for arg in args.cmd]
+    home = map_dir(default_mapping, os.getenv('HOME'))
+    if args.root:
+        uid = 0
+    else:
+        uid = os.getuid()
+    cmd = "docker exec -it -u {uid} -e HOME={home} -w {workdir} {name} sh -c '{command}'"
+    cmd = cmd.format(workdir=workdir, name=args.name, command=' '.join(mapped_args), uid=uid, home=home)
+    return cmd, ""
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['start', 'startgui', 'run', 'rootrun', 'stop', 'rm'])
-    parser.add_argument('name')
-    parser.add_argument('--print', action='store_true')
-    inputs_for_parser, misc_args = _separate_positional()
-    args = parser.parse_args(inputs_for_parser)
+    parser.add_argument('--print', action='store_true', help='Print the custom docker comand only'
+                                                             ' do not run')
+    subparsers = parser.add_subparsers(dest='command')
+    start_parser = subparsers.add_parser('start', help='Create and start a new container')
+    start_parser.add_argument('name', help='Tag for the new container')
+    start_parser.add_argument('image', help='Docker image to start')
+    start_parser.add_argument('--x11', action='store_true', help='Add x11 forwarding')
+
+    run_parser = subparsers.add_parser('run', help='Run command in an existing container')
+    run_parser.add_argument('name', help='Tag of the existing container')
+    run_parser.add_argument('--root', action='store_true', help='Run as root')
+    run_parser.add_argument('cmd', nargs=argparse.REMAINDER, help='Custom command to run')
+
+    args = parser.parse_args()
 
     default_mapping = load_default_mapping()
-    if args.command in ['start', 'run', 'rootrun', 'gui-start']:
-        assert len(misc_args) > 0
-    if args.command == 'start' or args.command == 'startgui':
-        image = misc_args[0]
-        gui_mount = ""
-        if args.command == 'startgui':
-            gui_mount = "-e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --runtime=nvidia"
-        cmd = "docker run -ti {mount_cmd} --ipc=host {gui_mount} --name={name} {image} bash; docker start {name}"
-        cmd = cmd.format(mount_cmd=_to_v_format(default_mapping), image=image, name=args.name, gui_mount=gui_mount)
-    elif args.command == 'run' or args.command == 'rootrun':
-        workdir = map_dir(default_mapping, os.getcwd())
-        mapped_args = [map_dir(default_mapping, arg, default=arg) for arg in misc_args]
-        home = map_dir(default_mapping, os.getenv('HOME'))
-        uid = os.getuid() if not args.command == 'rootrun' else 0
-        cmd = "docker exec -it -u {uid} -e HOME={home} -w {workdir} {name} sh -c '{command}'"
-        cmd = cmd.format(workdir=workdir, name=args.name, command=' '.join(mapped_args), uid=uid, home=home)
-    elif args.command == 'stop':
-        cmd = "docker stop {name}"
-        cmd = cmd.format(name=args.name)
-    elif args.command == 'rm':
-        cmd = "docker rm {name}"
-        cmd = cmd.format(name=args.name)
-    else:
-        raise ValueError("Unknown command: " + args.command)
 
-    print("Execute the following command:")
-    print(cmd)
-    print("==============================")
+    if args.command == 'start':
+        cmd, hints = get_start_cmd(args, default_mapping)
+    elif args.command == 'run':
+        cmd, hints = get_run_cmd(args, default_mapping)
+    else:
+        raise NotImplementedError
+
     if not args.print:
+        print("Executing the following command:")
+        print(cmd)
+        print(hints)
+        print("==============================")
         shell_run(cmd)
+    else:
+        print(cmd)
 
 if __name__ == "__main__":
     main()
