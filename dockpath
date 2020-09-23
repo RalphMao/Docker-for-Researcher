@@ -1,3 +1,10 @@
 $HOME:$HOME
-# Set up your custom directory mapping.
+# Set up your custom directory mapping:
 # /data_in_host:/data_in_container
+
+# It is recommended to map host directories with the same name,
+# as long as it is possible, for example:
+# /data:/data
+
+# Sometimes it is impossible to keep the same name, like that:
+# /usr/local/lib64:/dependency
