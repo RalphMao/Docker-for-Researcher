@@ -12,28 +12,41 @@ import argparse
 
 
 def load_default_mapping():
-    """Load directory mapping from dockpath config."""
+    """Load directory mapping from dockpath config.
+       
+    Environment variables and symlinks will be resolved in dockpath.
+    """
     filename = os.getenv("HOME") + '/.docker/dockpath'
     if os.path.exists(filename):
         lines = open(filename).readlines()
         mapping = []
         for line in lines:
             line = line.strip()
-            if line.startswith('#'):
+            if line.startswith('#') or len(line) == 0:
                 continue
             if len(line.split(':')) != 2:
-                continue
+                raise ValueError("Cannot parse dockpath, error line: " + line)
             mapping.append(line.split(':'))
     else:
         mapping = []
-    for idx, mapp in enumerate(mapping):
+    for idx in range(len(mapping)):
+        mapp = mapping[idx]
+        # Resolve environment variables
+        mapp = (os.path.expandvars(mapp[0]),
+                        os.path.expandvars(mapp[1]))
+
+        # Resolve symlink
         if os.path.realpath(mapp[0]) != mapp[0]:
-            mapping[idx] = (os.path.realpath(mapp[0]), mapp[1])
+            mapp = (os.path.realpath(mapp[0]), mapp[1])
+        mapping[idx] = mapp
     return mapping
 
 
 def map_dir(mapping, dirname, default='/'):
-    """Find directories in command and substitute them with mapped ones."""
+    """Replace a file/directory with correpsonding path in the container.
+    
+    Only replace dirname that starts with /
+    """
     if dirname.startswith('/'):
         for mapp in mapping:
             if dirname.startswith(mapp[0]):
@@ -46,6 +59,7 @@ def shell_run(cmd):
     """Ensure the correct alias is called, e.g., nvidia-docker."""
     subprocess.call([os.environ['SHELL'], '-i', '-c', cmd])
 
+
 def get_start_cmd(args, default_mapping):
     if args.x11:
         x11_mount = "-e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix"
@@ -57,10 +71,15 @@ def get_start_cmd(args, default_mapping):
     hints = "Exit bash to finish setup."
     return cmd, hints
 
+
 def get_run_cmd(args, default_mapping):
     workdir = map_dir(default_mapping, os.getcwd())
-    mapped_args = [map_dir(default_mapping, arg, default=arg) for arg in args.cmd]
     home = map_dir(default_mapping, os.getenv('HOME'))
+
+    # Every arg will be checked if starting with /.
+    # If yes, it is considered to be a file or directory, and will
+    # be mapped to container directory.
+    mapped_args = [map_dir(default_mapping, arg, default=arg) for arg in args.cmd]
     if args.root:
         uid = 0
     else:
@@ -68,6 +87,7 @@ def get_run_cmd(args, default_mapping):
     cmd = "docker exec -it -u {uid} -e HOME={home} -w {workdir} {name} sh -c '{command}'"
     cmd = cmd.format(workdir=workdir, name=args.name, command=' '.join(mapped_args), uid=uid, home=home)
     return cmd, ""
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -103,6 +123,7 @@ def main():
         shell_run(cmd)
     else:
         print(cmd)
+
 
 if __name__ == "__main__":
     main()
