@@ -21,10 +21,10 @@ cd Docker-for-Researcher
 bash setup.sh
 ```
 ### Configure directory mapping 
-The mapping configuration file is under `~/.docker/dockpath`. All configured source paths in host machine will be mapped and mounted in every docker container created by DfR. 
+The mapping configuration file is under `~/.docker/dockpath`. By default, DfR will map your home directory into all created containers. You may also add other mapped directories in the dockpath file.
 
 ## Basic Usage
-### Create your first DfR container
+### Create a container and run command
 Suppose you have a code under development at `~/experiment/test.py`. On the host machine, it runs with Python-3.5 by `python3 experiment/test.py /test-data`. Now you would like to test it with Python-3.9 inside a docker container, as installing Python-3.9 may be cumbersome or conflicting on the host. 
 First pull a python-3.9 image.
 ```
@@ -44,13 +44,47 @@ dock run --root py-3.9 "apt update; apt install python-numpy"
 # ";" could be interpreted by shell and break the command into two
 ```
 
+### Directory mapping and command substitution
+
+In the case that a host directory is mapped to a different directory in containers, dock will find possible directories/files in your command (but not guaranteed to find all of them), and substitute them with the mapped directories.
+
+For example, if your dockpath looks like this:
+```
+$HOME:$HOME
+/data-on-host:/data-on-container
+```
+When you call command `dock run py-3.9 python3 experiment/test.py /data-on-host`, the actually called command will be:
+```
+docker exec -it -u 1001 -e HOME=/ -w / py-3.9 sh -c 'python3 experiment/test.py /data-on-container/.'
+```
+If you command contains complicated directories, e.g., symlinks, check the printed command to make sure it is correct. A general suggestion is to keep the same directory naming, as long as it does not conflict with the container's system directories (like /usr/local/).
+
+### Commit/Publish/Load a container
+DfR containers are no different with a normal container, so you can use normal docker commands to commit/save/delete them.
+
+Commit a container into an image:
+```
+docker stop py-3.9
+docker commit py-3.9 py-3.9-image
+```
+
+Serialize an image (to copy between your workstations or for reproducibility):
+```
+docker save -o py-3.9.img.tar py-3.9-image
+```
+
+Load an image tar file:
+```
+docker load py-3.9.img.tar
+```
+
 ## Advanced Usage
 ### X11 forwarding (on local host)
 
 Enable X11 forwarding on docker may be non-trivial. This example provides one solution if you are using docker on your local machine. It does not work if you are ssh-ing into the host.
 
 ```
-# If you are using docker with root, this command might be needed
+# If you are using docker with root, this command might be needed.
 # xhost +local:root
 ```
 

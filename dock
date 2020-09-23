@@ -1,6 +1,6 @@
 #! /usr/bin/python
 """
-A wrapper script around docker to ease research.
+A wrapper script around docker.
 
 Author: Huizi Mao
 """
@@ -33,7 +33,7 @@ def load_default_mapping():
 
 
 def map_dir(mapping, dirname, default='/'):
-    """Find directories in command and automatically substitute it with mapped ones."""
+    """Find directories in command and substitute them with mapped ones."""
     if dirname.startswith('/'):
         for mapp in mapping:
             if dirname.startswith(mapp[0]):
@@ -43,7 +43,7 @@ def map_dir(mapping, dirname, default='/'):
 
 
 def shell_run(cmd):
-    """Ensure the right alias is called, e.g., nvidia-docker."""
+    """Ensure the correct alias is called, e.g., nvidia-docker."""
     subprocess.call([os.environ['SHELL'], '-i', '-c', cmd])
 
 def get_start_cmd(args, default_mapping):
